@@ -41,7 +41,11 @@ for calorie_count in elf_list:
 # %%
 ### changing the calorie count to integers
 elf_df['calorie_count'] = elf_df['calorie_count'].apply(lambda x: int(x))
+
+###calculating the max the group is carrying
 elf_df.groupby(['elf_id']).sum().max()[0]
 
+
+### Problem Part 2
 # %%
-elf_df.groupby(['elf_id']).sum()
+elf_df.groupby(['elf_id']).sum().sort_values('calorie_count',ascending=False)['calorie_count'].head(3).sum()
