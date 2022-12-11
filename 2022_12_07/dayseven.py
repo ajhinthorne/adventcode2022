@@ -2,6 +2,7 @@
 import re
 import pandas as pd
 import json
+import numpy as np
 
 #find the size of directories with size < 100,000
 
@@ -25,6 +26,95 @@ command_list = readfile(d7_input_file)
 #123 abc means that the current directory contains a file named abc with size 123.
 #dir xyz means that the current directory contains a directory named xyz.
 
+
+# %%
+directory_data = pd.DataFrame(columns=['directory','subdirectory'])
+file_data = pd.DataFrame(columns=['directory','file','filesize'])
+current_dir = '/'
+previous_dir = '/'
+
+
+for cmd in command_list:
+
+    if cmd == '$ ls':
+        continue
+    elif cmd == '$ cd /':
+        temp_current_dir = '/'
+        previous_dir = current_dir
+        current_dir = temp_current_dir
+        continue
+
+    elif len(re.findall('(?<=\$\scd\s)\w+',cmd)) > 0:
+        temp_current_dir = re.search('(?<=\$\scd\s)\w+',cmd).group(0)
+        previous_dir = current_dir
+        current_dir = temp_current_dir
+        continue
+
+    elif cmd == '$ cd ..':
+        temp_current_dir = current_dir
+        current_dir = previous_dir
+        previous_dir = temp_current_dir
+        continue
+
+    elif len(re.findall('(?<=dir\s)\w+',cmd)) > 0: ### this indicates a directory line  
+        subdirectory = re.search('(?<=dir\s)\w+',cmd).group(0)
+
+        add_dir_data = pd.DataFrame([[current_dir,subdirectory]],columns=['directory','subdirectory'])
+        directory_data = directory_data.append(add_dir_data)
+
+    elif len(re.findall('\d+\s.*',cmd)) > 0: #### this indicates a file line
+
+        file_name = re.findall('(?<=\d\s).*',cmd)[0]
+        file_size = int(re.findall('\d+',cmd)[0])
+
+        add_file_data = pd.DataFrame([[current_dir,file_name,file_size]],columns=['directory','file','filesize'])
+
+        file_data = file_data = file_data.append(add_file_data)
+
+#%%
+directory_data.reset_index(drop=True,inplace=True)
+file_data.reset_index(drop=True,inplace=True)
+
+
+## calculating size of directories
+#%%
+directory_size_files_only = file_data[['directory','filesize']].groupby('directory').sum()
+directory_size_files_only = directory_size_files_only.reset_index()
+directory_size_files_only = directory_size_files_only.rename(columns={"directory": "subdirectory"})
+directory_data = directory_data.merge(directory_size_files_only,on="subdirectory",how="left")
+
+#%%
+directory_size_data = pd.DataFrame(columns=['directory','size'])
+directory_list = np.unique(np.append(directory_data['directory'].unique(),file_data['directory'].unique()))
+
+
+#%%
+### this will calculate the size of all directories with a subdirectory
+for dir in directory_list:
+    dir_size_df = pd.DataFrame(columns = ['directory','size'])
+    dir_size = 0
+
+    try:
+        dir_size += directory_size_files_only[directory_size_files_only['subdirectory'] == dir]['filesize'].sum()
+    except:
+        print("Directory Has No Files")
+
+    try:
+        dir_size += directory_data[directory_data['directory'] == dir]['filesize'].sum()
+    except:
+        print("Directory Not Found")
+
+    dir_size_df = pd.DataFrame([[dir,dir_size]],columns = ['directory','size'])
+
+    directory_size_data = directory_size_data.append(dir_size_df)
+
+
+# %%
+directory_size_data[directory_size_data['size'] <= 100000]['size'].sum()
+
+
+### first guess: 1340491 <- 
+
 #%%% helpful functions
 
 def calculate_size(command):
@@ -34,7 +124,7 @@ def calculate_size(command):
 
 calculate_size(command_list[5])
 
-def 
+
 
 
 
