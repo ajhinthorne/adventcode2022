@@ -83,6 +83,17 @@ directory_size_files_only = directory_size_files_only.reset_index()
 directory_size_files_only = directory_size_files_only.rename(columns={"directory": "subdirectory"})
 directory_data = directory_data.merge(directory_size_files_only,on="subdirectory",how="left")
 
+
+directory_data['filesize'] = np.where(np.isnan(directory_data['filesize']),
+        
+        
+        directory_data[directory_data['directory'] == row[1]['subdirectory']]['filesize'].sum()
+
+
+
+
+
+
 #%%
 directory_size_data = pd.DataFrame(columns=['directory','size'])
 directory_list = np.unique(np.append(directory_data['directory'].unique(),file_data['directory'].unique()))
@@ -100,9 +111,32 @@ for dir in directory_list:
         print("Directory Has No Files")
 
     try:
-        dir_size += directory_data[directory_data['directory'] == dir]['filesize'].sum()
+
+
+
+
+
+        if directory_data[directory_data['directory'] == dir]['filesize'].sum() == 0:
+            
+            for subdir in directory_data[directory_data['directory'] == dir]['subdirectory']:
+                dir_size += directory_data[directory_data['directory'] == subdir]['filesize'].sum()
+        else:  
+            dir_size += directory_data[directory_data['directory'] == dir]['filesize'].sum()
     except:
         print("Directory Not Found")
+
+
+    try:
+        for subdir in directory_data[directory_data['directory'] == dir]['subdirectory']:
+
+            if len(directory_data[(directory_data['directory'] == subdir) & np.isnan(directory_data['filesize'])]) > 0:
+                print("There are still uncounted subsubdirectories")
+
+            dir_size += directory_data[directory_data['directory'] == subdir]['filesize'].sum()
+
+
+    except:
+        print("Subdirectory Issue")
 
     dir_size_df = pd.DataFrame([[dir,dir_size]],columns = ['directory','size'])
 
@@ -113,7 +147,7 @@ for dir in directory_list:
 directory_size_data[directory_size_data['size'] <= 100000]['size'].sum()
 
 
-### first guess: 1340491 <- 
+### first guess: 1340491 <- This number is too low
 
 #%%% helpful functions
 
